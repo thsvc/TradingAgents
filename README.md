@@ -1,30 +1,7 @@
-<div align="center" style="line-height: 1.4;">
-  <a href="https://arxiv.org/abs/2412.20138" target="_blank"><img alt="arXiv" src="https://img.shields.io/badge/arXiv-2412.20138-B31B1B?logo=arxiv"/></a>
-  <a href="https://discord.com/invite/hk9PGKShPK" target="_blank"><img alt="Discord" src="https://img.shields.io/badge/Discord-TradingAgents-7289da?logo=discord&logoColor=white&color=7289da"/></a>
-  <br>
-  <a href="https://github.com/thsvc/TradingAgents" target="_blank"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-thsvc%2FTradingAgents-24292e?logo=github"/></a>
-</div>
-
-<div align="center">
-  <!-- Keep these links. Translations will automatically update with the README. -->
-  <a href="https://www.readme-i18n.com/thsvc/TradingAgents?lang=de">Deutsch</a> | 
-  <a href="https://www.readme-i18n.com/thsvc/TradingAgents?lang=es">Español</a> | 
-  <a href="https://www.readme-i18n.com/thsvc/TradingAgents?lang=fr">français</a> | 
-  <a href="https://www.readme-i18n.com/thsvc/TradingAgents?lang=ja">日本語</a> | 
-  <a href="https://www.readme-i18n.com/thsvc/TradingAgents?lang=ko">한국어</a> | 
-  <a href="https://www.readme-i18n.com/thsvc/TradingAgents?lang=pt">Português</a> | 
-  <a href="https://www.readme-i18n.com/thsvc/TradingAgents?lang=ru">Русский</a> | 
-  <a href="https://www.readme-i18n.com/thsvc/TradingAgents?lang=zh">中文</a>
-</div>
 
 ---
 
 # TradingAgents: Multi-Agents LLM Financial Trading Framework 
-
-> 🎉 **TradingAgents** officially released! We have received numerous inquiries about the work, and we would like to express our thanks for the enthusiasm in our community.
->
-> So we decided to fully open-source the framework. Looking forward to building impactful projects with you!
-
 
 ## TradingAgents Framework
 
