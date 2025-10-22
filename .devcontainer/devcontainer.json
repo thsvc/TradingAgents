@@ -1,0 +1,12 @@
+{
+  "name": "tradingagents-ws",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "features": { "ghcr.io/devcontainers/features/docker-in-docker:2": {} },
+  "postCreateCommand": "bash .devcontainer/postCreate.sh",
+  "customizations": {
+    "vscode": {
+      "settings": { "python.testing.pytestEnabled": true },
+      "extensions": ["ms-python.python","ms-python.vscode-pylance","ms-azuretools.vscode-docker"]
+    }
+  }
+}
