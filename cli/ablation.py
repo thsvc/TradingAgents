@@ -7,6 +7,7 @@ import random
 from typing import Iterable, List, Optional, Tuple
 
 from cli import baseline as baseline_cli
+from tradingagents import policy, risk
 
 
 def parse_args() -> argparse.Namespace:
@@ -65,31 +66,72 @@ def simulate_heuristic_equity(
     equities: List[float] = []
 
     prev_price = prices[0]
-    prev_position = 0
+    policy_params = policy.PolicyParams()
+    risk_params = risk.RiskParams(
+        max_daily_loss=5_000.0,
+        max_exposure=200_000.0,
+        max_concentration_per_symbol=150_000.0,
+        cooldown_bars=2,
+        min_stop_distance_factor=0.5,
+    )
+    state = risk.RiskState()
+    symbol = universe.split(",")[0]
 
     for idx, price in enumerate(prices):
         have_fast, ma_fast = moving_average(prices, idx, 10)
         have_slow, ma_slow = moving_average(prices, idx, 50)
 
+        signal = 0
         if have_fast and have_slow:
             if ma_fast > ma_slow * 1.001:
-                position = 1
+                signal = 1
             elif ma_fast < ma_slow * 0.999:
-                position = -1
-            else:
-                position = 0
-        else:
-            position = 0
+                signal = -1
+
+        atr = baseline_cli.rolling_atr(prices, idx)
+        spread = price * 0.0008
+        allow, policy_reason = policy.should_trade(atr, spread, policy_params)
+        direction = signal if allow else 0
+        size = 0.0
+        stop_distance = max(atr * 0.5, 1e-6)
+        state.decay_cooldown()
+
+        if direction != 0:
+            size = policy.position_size(max(atr, policy_params.eps), equity, policy_params)
+            try:
+                risk.check_trade(size, symbol, max(atr, policy_params.eps), stop_distance, risk_params, state)
+                risk.record_trade(symbol, size, state)
+            except risk.RiskRejection as exc:
+                direction = 0
+                size = 0.0
+                print(
+                    json.dumps(
+                        {
+                            "event": "risk_reject",
+                            "timestamp": days[idx].isoformat(),
+                            "universe": universe,
+                            "reason": str(exc),
+                            "run_mode": "heur",
+                        },
+                        separators=(",", ":"),
+                    )
+                )
+        elif not allow and policy_reason:
+            direction = 0
 
         if idx > 0:
             ret = (price / prev_price) - 1.0
-            equity *= 1.0 + prev_position * ret
+            pnl = direction * size * ret
+            equity = max(1_000.0, equity + pnl)
+            risk.record_daily_pnl(pnl, risk_params, state)
+            risk.release_positions(state, symbol)
+        else:
+            risk.release_positions(state, symbol)
 
         equities.append(round(equity, 2))
-        positions.append(position)
+        positions.append(direction)
 
         prev_price = price
-        prev_position = position
 
     return equities, positions
 
@@ -149,7 +191,64 @@ def main() -> None:
     print(json.dumps(config_event, separators=(",", ":")))
 
     if args.mode == "llm":
-        equities = baseline_cli.simulate_equity_path(days, args.seed, start, end, args.universe)
+        prices = baseline_cli.simulate_price_path(days, args.seed, start, end, args.universe)
+        equities = []
+        equity = 100000.0
+        prev_price = prices[0]
+        policy_params = policy.PolicyParams()
+        risk_params = risk.RiskParams(
+            max_daily_loss=5_000.0,
+            max_exposure=200_000.0,
+            max_concentration_per_symbol=150_000.0,
+            cooldown_bars=2,
+            min_stop_distance_factor=0.5,
+        )
+        state = risk.RiskState()
+        symbol = args.universe.split(",")[0]
+
+        for idx, price in enumerate(prices):
+            atr = baseline_cli.rolling_atr(prices, idx)
+            spread = price * 0.0008
+            allow, policy_reason = policy.should_trade(atr, spread, policy_params)
+            direction = 0
+            size = 0.0
+            stop_distance = max(atr * 0.5, 1e-6)
+            state.decay_cooldown()
+
+            if allow:
+                size = policy.position_size(max(atr, policy_params.eps), equity, policy_params)
+                direction = 1 if price >= prev_price else -1
+                try:
+                    risk.check_trade(size, symbol, max(atr, policy_params.eps), stop_distance, risk_params, state)
+                    risk.record_trade(symbol, size, state)
+                except risk.RiskRejection as exc:
+                    direction = 0
+                    size = 0.0
+                    print(
+                        json.dumps(
+                            {
+                                "event": "risk_reject",
+                                "timestamp": days[idx].isoformat(),
+                                "universe": args.universe,
+                                "reason": str(exc),
+                                "run_mode": "llm",
+                            },
+                            separators=(",", ":"),
+                        )
+                    )
+
+            if idx > 0:
+                ret = price / prev_price - 1.0
+                pnl = direction * size * ret
+                equity = max(1_000.0, equity + pnl)
+                risk.record_daily_pnl(pnl, risk_params, state)
+                risk.release_positions(state, symbol)
+            else:
+                risk.release_positions(state, symbol)
+
+            equities.append(round(equity, 2))
+            prev_price = price
+
         emit_stream(days, equities, args.universe, run_mode="llm")
     else:
         equities, positions = simulate_heuristic_equity(days, args.seed, start, end, args.universe)
