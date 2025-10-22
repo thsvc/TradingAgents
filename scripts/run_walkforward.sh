@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export BYPASS_CACHE=1
 mkdir -p logs/wf
 SEED="${SEED:-123}"
 UNIVERSE="${UNIVERSE:-BTC-USD,ETH-USD}"
@@ -18,6 +19,8 @@ WINDOWS=(
 )
 : > logs/wf/SUMMARY.tsv
 echo -e "window\tpoints\tsharpe\tmdd\tlog" >> logs/wf/SUMMARY.tsv
+: > logs/wf/METADATA.tsv
+echo -e "window\tseed\tstart\tend\tuniverse\tlog" >> logs/wf/METADATA.tsv
 
 for W in "${WINDOWS[@]}"; do
   IFS=, read START END <<< "$W"
@@ -30,5 +33,28 @@ for W in "${WINDOWS[@]}"; do
   SHR=$(python -c 'import json,sys; j=json.loads(sys.argv[1]); print(j.get("sharpe",0.0))' "$MET")
   MDD=$(python -c 'import json,sys; j=json.loads(sys.argv[1]); print(j.get("mdd",0.0))' "$MET")
   echo -e "${START}→${END}\t${PTS}\t${SHR}\t${MDD}\t${OUT}" >> logs/wf/SUMMARY.tsv
+  CONFIG_LINE=$(python - "$OUT" "${START}→${END}" "$SEED" <<'PY'
+import json
+import sys
+
+path, window, seed = sys.argv[1:4]
+with open(path) as fh:
+    for line in fh:
+        evt = json.loads(line)
+        if evt.get("event") == "config":
+            print("\t".join([
+                window,
+                seed,
+                str(evt.get("start")),
+                str(evt.get("end")),
+                str(evt.get("universe")),
+                path,
+            ]))
+            break
+    else:
+        raise SystemExit(f"No config event found in {path}")
+PY
+)
+  echo "$CONFIG_LINE" >> logs/wf/METADATA.tsv
   echo "$OUT" > logs/LATEST
 done
