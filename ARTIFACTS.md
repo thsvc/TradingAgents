@@ -15,3 +15,5 @@ Last 10 log lines:
 {"event":"portfolio_mark_to_market","timestamp":"2024-06-28","universe":"BTC-USD,ETH-USD","equity":89128.17}
 {"event":"portfolio_equity","timestamp":"2024-06-28","universe":"BTC-USD,ETH-USD","equity":89128.17}
 ```
+Determinism test: pass
+Risk-gate test: pass
