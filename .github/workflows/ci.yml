@@ -17,3 +17,6 @@ jobs:
             pip install -e .[dev] || pip install -e .
           fi
       - run: pytest -q
+      - run: bash scripts/run_walkforward.sh
+      - run: python scripts/wf_to_md.py > logs/wf/SUMMARY.md
+      - run: bash scripts/run_ablation.sh
